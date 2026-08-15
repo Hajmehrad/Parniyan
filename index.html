@@ -2,7 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>پرنیان — اطلسیه‌ی سه‌بعدی مانتو</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,400;1,400;1,500&display=swap" rel="stylesheet">
@@ -21,18 +21,25 @@
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   html{scroll-behavior:smooth;}
+  html,body{
+    overflow-x:hidden;
+    width:100%;
+  }
   body{
     background:var(--bg);
     color:var(--cream);
     font-family:'Vazirmatn', sans-serif;
     -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    min-height:100dvh;
   }
   ::selection{background:var(--rust);color:var(--cream);}
   .ltr{direction:ltr;unicode-bidi:isolate;font-family:'Cormorant Garamond', serif;}
 
   #scene{
-    position:fixed;inset:0;width:100vw;height:100vh;z-index:0;
+    position:fixed;inset:0;z-index:0;
     display:block;
+    touch-action:pan-y;
   }
   #loading{
     position:fixed;inset:0;z-index:999;background:var(--bg);
@@ -77,8 +84,8 @@
   @media(max-width:720px){.navlinks{display:none;}}
 
   /* ---------- generic stop section ---------- */
-  .stop{position:relative;min-height:100vh;display:flex;align-items:center;padding:0 6vw;}
-  .stop.tall{min-height:100vh;}
+  .stop{position:relative;min-height:100vh;min-height:100dvh;display:flex;align-items:center;padding:0 6vw;}
+  .stop.tall{min-height:100vh;min-height:100dvh;}
   .panel{
     max-width:480px;background:var(--panel);backdrop-filter:blur(10px);
     border:1px solid var(--line);border-radius:6px;padding:38px 34px;
@@ -105,7 +112,7 @@
 
   /* collection */
   #collection-wrap{position:relative;}
-  .coat-stop{min-height:100vh;display:flex;align-items:center;padding:0 6vw;}
+  .coat-stop{min-height:100vh;min-height:100dvh;display:flex;align-items:center;padding:0 6vw;}
   .coat-stop:nth-child(even){justify-content:flex-start;}
   .coat-stop:nth-child(odd){justify-content:flex-end;}
   .coat-panel{max-width:400px;}
@@ -250,7 +257,7 @@
 
 </div><!-- /.page -->
 
-<div class="hint-tag" id="dragHint">با کشیدن ماوس، نمایشگاه را بچرخانید</div>
+<div class="hint-tag" id="dragHint">با کشیدن، نمایشگاه را بچرخانید</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -262,8 +269,9 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
 /* ================= THREE.JS SHOWROOM ================= */
 const canvas = document.getElementById('scene');
-const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+const renderer = new THREE.WebGLRenderer({canvas, antialias:!isTouchDevice});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, isTouchDevice ? 1.5 : 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = false;
 renderer.outputEncoding = THREE.sRGBEncoding;
@@ -315,7 +323,7 @@ floor.rotation.x = -Math.PI/2; floor.position.y = -2.55;
 world.add(floor);
 
 /* ---- decorative backdrop drape (animated) ---- */
-const bgGeo = new THREE.PlaneGeometry(30, 9, 60, 20);
+const bgGeo = new THREE.PlaneGeometry(30, 9, isTouchDevice ? 30 : 60, isTouchDevice ? 10 : 20);
 const bgColors = [];
 for(let i=0;i<bgGeo.attributes.position.count;i++) bgColors.push(0.09,0.07,0.05);
 bgGeo.setAttribute('color', new THREE.Float32BufferAttribute(bgColors,3));
@@ -602,13 +610,19 @@ window.addEventListener('pointermove', (e)=>{
 });
 
 /* ================= RESIZE ================= */
+let resizeRAF = null;
 function onResize(){
-  camera.aspect = window.innerWidth/window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  computeStops();
+  if(resizeRAF) cancelAnimationFrame(resizeRAF);
+  resizeRAF = requestAnimationFrame(()=>{
+    const w = window.innerWidth, h = window.innerHeight;
+    camera.aspect = w/h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+    computeStops();
+  });
 }
 window.addEventListener('resize', onResize);
+window.addEventListener('orientationchange', ()=> setTimeout(onResize, 250));
 window.addEventListener('load', ()=> setTimeout(computeStops, 300));
 
 /* ================= ANIMATE ================= */
